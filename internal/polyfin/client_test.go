@@ -23,7 +23,7 @@ func TestAdminAndAddonSafeRead(t *testing.T){
   if r.Header.Get("Cookie")!="polyfin_session=synthetic"{t.Error("cookie not provided")}
   seen=append(seen,r.URL.Path)
   switch r.URL.Path{
-  case "/admin/api/session":w.Write([]byte(`{"isAdministrator":true}`))
+  case "/admin/api/session":w.Write([]byte(`{"user":{"isAdministrator":true}}`))
   case "/admin/api/scopes/shared/addons":w.Write([]byte(`[{"id":"local-uuid","name":"Nebula","kind":"eclipse","enabled":true,"manifestUrl":"SECRET_DO_NOT_EMIT"}]`))
   default:t.Error("unexpected path")
   }

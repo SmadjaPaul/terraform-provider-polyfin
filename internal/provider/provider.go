@@ -24,7 +24,7 @@ func(p *PolyfinProvider)Configure(ctx context.Context,q provider.ConfigureReques
  var m model;r.Diagnostics.Append(q.Config.Get(ctx,&m)...);if r.Diagnostics.HasError(){return}
  endpoint:=m.Endpoint.ValueString();if endpoint==""{endpoint=os.Getenv("POLYFIN_ENDPOINT")}
  if endpoint==""{r.Diagnostics.AddError("Missing endpoint","Set endpoint or POLYFIN_ENDPOINT.");return}
- c,err:=polyfin.New(endpoint,os.Getenv("POLYFIN_ADMIN_COOKIE_FILE"))
+ c,err:=polyfin.NewFromEnvironment(endpoint)
  if err!=nil{r.Diagnostics.AddError("Polyfin provider configuration failed",err.Error());return}
  r.ResourceData=c;r.DataSourceData=c
 }

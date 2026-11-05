@@ -16,6 +16,13 @@ The provider refuses implicit addon deletion and refuses creation when
 another installed source has the same display name. It does not access
 playback history, profile data, family accounts or existing databases.
 
+## Authentication
+
+Set either `POLYFIN_ADMIN_COOKIE_FILE` to a protected session cookie,
+or both `POLYFIN_ADMIN_USERNAME_FILE` and `POLYFIN_ADMIN_PASSWORD_FILE`
+for native noninteractive login from Atlantis. Never pass these as Terraform
+provider attributes, shell command arguments or checked-in variables.
+
 ## Local development
 
 ```sh

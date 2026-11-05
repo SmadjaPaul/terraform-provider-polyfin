@@ -25,6 +25,8 @@ type Client struct {
  endpoint string
  cookie string
  http *http.Client
+ loginName string
+ loginPassword string
 }
 func New(endpoint, cookieFile string) (*Client,error) {
  u,err:=url.Parse(endpoint)
@@ -43,6 +45,65 @@ func New(endpoint, cookieFile string) (*Client,error) {
  // Never send the administrator cookie to a redirect destination.
  client:=&http.Client{Timeout:20*time.Second,CheckRedirect:func(*http.Request,[]*http.Request)error{return http.ErrUseLastResponse}}
  return &Client{endpoint:strings.TrimRight(endpoint,"/"),cookie:cookie,http:client},nil
+}
+// NewFromEnvironment supports an Atlantis-safe noninteractive native
+// administrator login. Neither passwords nor cookies live in Terraform state.
+func NewFromEnvironment(endpoint string)(*Client,error){
+ cookieFile:=os.Getenv("POLYFIN_ADMIN_COOKIE_FILE")
+ nameFile:=os.Getenv("POLYFIN_ADMIN_USERNAME_FILE")
+ passwordFile:=os.Getenv("POLYFIN_ADMIN_PASSWORD_FILE")
+ if cookieFile!="" && (nameFile!=""||passwordFile!=""){
+  return nil,errors.New("ambiguous Polyfin admin authentication modes")
+ }
+ if cookieFile!=""{return New(endpoint,cookieFile)}
+ if nameFile==""||passwordFile==""{return nil,errors.New("set cookie file or both admin username/password files")}
+ nameBytes,nameErr:=os.ReadFile(nameFile)
+ passBytes,passErr:=os.ReadFile(passwordFile)
+ if nameErr!=nil||passErr!=nil{return nil,errors.New("unable to read Polyfin administrator credential files")}
+ name:=strings.TrimSpace(string(nameBytes))
+ pass:=strings.TrimRight(string(passBytes),"\r\n")
+ if name==""||pass==""{return nil,errors.New("empty Polyfin administrator credentials")}
+ // Reuse the same endpoint/transport validation, with no source cookie file.
+ c,err:=NewForLogin(endpoint)
+ if err!=nil{return nil,err}
+ c.loginName=name;c.loginPassword=pass
+ return c,nil
+}
+func NewForLogin(endpoint string)(*Client,error) {
+ // Cookie-less client uses the same validated origin and redirect policy.
+ u,err:=url.Parse(endpoint)
+ if err!=nil||u.Host==""||u.User!=nil||u.RawQuery!=""||u.Fragment!=""||u.Path!=""{
+  return nil,errors.New("Polyfin endpoint must be a bare origin without credentials or query")
+ }
+ host:=strings.ToLower(u.Hostname())
+ if u.Scheme!="https" && !(u.Scheme=="http" && (host=="localhost"||host=="127.0.0.1"||host=="::1"||strings.HasSuffix(host,".svc.cluster.local"))){
+  return nil,errors.New("Polyfin endpoint requires HTTPS, except for loopback or Kubernetes Service")
+ }
+ httpClient:=&http.Client{Timeout:20*time.Second,CheckRedirect:func(*http.Request,[]*http.Request)error{return http.ErrUseLastResponse}}
+ return &Client{endpoint:strings.TrimRight(endpoint,"/"),http:httpClient},nil
+}
+func (c *Client) ensureSession(ctx context.Context)error{
+ if c.cookie!=""{return nil}
+ if c.loginName==""||c.loginPassword==""{return errors.New("Polyfin admin authentication unavailable")}
+ // Login response contains a session cookie, not a bearer token.
+ payload:=map[string]string{"name":c.loginName,"password":c.loginPassword}
+ b,_:=json.Marshal(payload)
+ req,err:=http.NewRequestWithContext(ctx,"POST",c.endpoint+"/admin/api/session",bytes.NewReader(b))
+ if err!=nil{return errors.New("Polyfin login request failed")}
+ req.Header.Set("Content-Type","application/json")
+ res,err:=c.http.Do(req)
+ if err!=nil{return errors.New("Polyfin login transport failed")}
+ defer res.Body.Close()
+ if res.StatusCode!=http.StatusOK{
+  return fmt.Errorf("Polyfin login returned HTTP %d (body suppressed)",res.StatusCode)
+ }
+ for _,cookie:=range res.Cookies(){
+  if cookie.Name=="polyfin_session" && cookie.Value!=""{
+   c.cookie="polyfin_session="+cookie.Value
+   return nil
+  }
+ }
+ return errors.New("Polyfin login returned no session cookie")
 }
 func (c *Client) request(ctx context.Context,method,path string,body any,out any) (int,error) {
  var reader io.Reader
@@ -71,10 +132,13 @@ func (c *Client) request(ctx context.Context,method,path string,body any,out any
  return res.StatusCode,nil
 }
 func (c *Client) CheckAdmin(ctx context.Context)error{
- var session struct{ IsAdministrator bool `json:"isAdministrator"` }
+ if err:=c.ensureSession(ctx);err!=nil{return err}
+ var session struct{
+ User struct{IsAdministrator bool `json:"isAdministrator"`} `json:"user"`
+}
  _,err:=c.request(ctx,"GET","/admin/api/session",nil,&session)
  if err!=nil{return err}
- if !session.IsAdministrator{return errors.New("Polyfin session is not administrator")}
+ if !session.User.IsAdministrator{return errors.New("Polyfin session is not administrator")}
  return nil
 }
 func (c *Client) List(ctx context.Context)([]Addon,error){
