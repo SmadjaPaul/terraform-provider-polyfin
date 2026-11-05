@@ -34,3 +34,7 @@ See [architecture](docs/architecture.md) and [release checklist](docs/release.md
 Production Atlantis configuration and a Registry release are **not** part of
 this bootstrap. No Polyfin admin cookie, TorBox key or manifest address is
 included here.
+
+Registry documentation is available in [docs/index.md](docs/index.md),
+including the write-only manifest contract, import identity and rollback
+procedure.
