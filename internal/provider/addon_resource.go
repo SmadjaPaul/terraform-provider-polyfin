@@ -39,8 +39,11 @@ func(r *AddonResource)Configure(_ context.Context,q resource.ConfigureRequest,a 
  c,ok:=q.ProviderData.(*polyfin.Client);if !ok{a.Diagnostics.AddError("Invalid provider","Client missing");return};r.client=c
 }
 func(r *AddonResource)auth(ctx context.Context)error{return r.client.CheckAdmin(ctx)}
-func validateURL(s string)bool{
- return strings.HasPrefix(s,"https://") && !strings.ContainsAny(s,"\n\r")
+func validateURL(s string)bool {
+ parsed,err:=url.Parse(s)
+ return err==nil && parsed.Scheme=="https" && parsed.Host!="" && parsed.User==nil &&
+  parsed.Fragment=="" && strings.HasSuffix(parsed.Path,"/manifest.json") &&
+  !strings.ContainsAny(s,"\\r\\n")
 }
 func(r *AddonResource)Create(ctx context.Context,q resource.CreateRequest,a *resource.CreateResponse){
  var m addonModel;a.Diagnostics.Append(q.Plan.Get(ctx,&m)...);if a.Diagnostics.HasError(){return}
