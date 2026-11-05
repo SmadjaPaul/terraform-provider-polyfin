@@ -12,6 +12,7 @@ import (
  "net/url"
  "os"
  "strings"
+ "sync"
  "time"
 )
 
@@ -27,6 +28,7 @@ type Client struct {
  http *http.Client
  loginName string
  loginPassword string
+ loginMu sync.Mutex
 }
 func New(endpoint, cookieFile string) (*Client,error) {
  u,err:=url.Parse(endpoint)
@@ -83,6 +85,8 @@ func NewForLogin(endpoint string)(*Client,error) {
  return &Client{endpoint:strings.TrimRight(endpoint,"/"),http:httpClient},nil
 }
 func (c *Client) ensureSession(ctx context.Context)error{
+ c.loginMu.Lock()
+ defer c.loginMu.Unlock()
  if c.cookie!=""{return nil}
  if c.loginName==""||c.loginPassword==""{return errors.New("Polyfin admin authentication unavailable")}
  // Login response contains a session cookie, not a bearer token.
@@ -94,7 +98,7 @@ func (c *Client) ensureSession(ctx context.Context)error{
  res,err:=c.http.Do(req)
  if err!=nil{return errors.New("Polyfin login transport failed")}
  defer res.Body.Close()
- if res.StatusCode!=http.StatusOK{
+ if res.StatusCode<200||res.StatusCode>=300{
   return fmt.Errorf("Polyfin login returned HTTP %d (body suppressed)",res.StatusCode)
  }
  for _,cookie:=range res.Cookies(){
