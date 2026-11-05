@@ -8,7 +8,6 @@ import (
 	rschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"net/url"
-	"regexp"
 	"strings"
 )
 
@@ -52,80 +51,34 @@ func (r *AddonResource) Configure(_ context.Context, q resource.ConfigureRequest
 	r.client = c
 }
 func (r *AddonResource) auth(ctx context.Context) error { return r.client.CheckAdmin(ctx) }
-// Explicitly admit plain HTTP for a named Kubernetes Service *within the
-// cluster*. The native Polyfin admin API itself restricts private-network
-// sources to administrators; do not widen this to arbitrary LAN/IP hosts.
-var kubeServiceHost = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.svc\\.cluster\\.localpackage provider
-
-import (
-	"context"
-	"github.com/SmadjaPaul/terraform-provider-polyfin/internal/polyfin"
-	"github.com/hashicorp/terraform-plugin-framework/path"
-	"github.com/hashicorp/terraform-plugin-framework/resource"
-	rschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/types"
-	"net/url"
-	"regexp"
-	"strings"
-)
-
-var _ resource.Resource = (*AddonResource)(nil)
-var _ resource.ResourceWithConfigure = (*AddonResource)(nil)
-var _ resource.ResourceWithImportState = (*AddonResource)(nil)
-
-type AddonResource struct{ client *polyfin.Client }
-type addonModel struct {
-	ID              types.String `tfsdk:"id"`
-	Name            types.String `tfsdk:"name"`
-	Kind            types.String `tfsdk:"kind"`
-	Enabled         types.Bool   `tfsdk:"enabled"`
-	ManifestURL     types.String `tfsdk:"manifest_url_wo"`
-	ManifestVersion types.Int64  `tfsdk:"manifest_url_wo_version"`
-}
-
-func NewAddonResource() resource.Resource { return &AddonResource{} }
-func (r *AddonResource) Metadata(_ context.Context, q resource.MetadataRequest, a *resource.MetadataResponse) {
-	a.TypeName = q.ProviderTypeName + "_addon"
-}
-func (r *AddonResource) Schema(_ context.Context, _ resource.SchemaRequest, a *resource.SchemaResponse) {
-	a.Schema = rschema.Schema{Description: "Native Polyfin server addon. Removal is blocked to prevent data loss.", Attributes: map[string]rschema.Attribute{
-		"id":                      rschema.StringAttribute{Computed: true, Description: "Polyfin-local installation UUID."},
-		"name":                    rschema.StringAttribute{Required: true, Description: "Exact manifest name; immutable after creation."},
-		"kind":                    rschema.StringAttribute{Computed: true, Description: "Native stremio or eclipse source kind."},
-		"enabled":                 rschema.BoolAttribute{Required: true, Description: "Whether this addon is enabled."},
-		"manifest_url_wo":         rschema.StringAttribute{Optional: true, WriteOnly: true, Sensitive: true, Description: "Tokenized manifest address; write-only, never stored in state; mandatory on create and on deliberate version increment."},
-		"manifest_url_wo_version": rschema.Int64Attribute{Optional: true, Description: "Non-sensitive rotation counter. Increment when changing manifest_url_wo."},
-	}}
-}
-func (r *AddonResource) Configure(_ context.Context, q resource.ConfigureRequest, a *resource.ConfigureResponse) {
-	if q.ProviderData == nil {
-		return
+// Allow plain HTTP only for exact Kubernetes Service FQDNs.
+// Polyfin restricts server-side private addon installation to administrators.
+func isKubernetesServiceHost(host string) bool {
+	labels := strings.Split(strings.ToLower(host), ".")
+	if len(labels) != 5 || labels[2] != "svc" || labels[3] != "cluster" || labels[4] != "local" {
+		return false
 	}
-	c, ok := q.ProviderData.(*polyfin.Client)
-	if !ok {
-		a.Diagnostics.AddError("Invalid provider", "Client missing")
-		return
+	for _, label := range labels[:2] {
+		if len(label) == 0 || len(label) > 63 || label[0] == '-' || label[len(label)-1] == '-' {
+			return false
+		}
+		for _, ch := range label {
+			if !((ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '-') {
+				return false
+			}
+		}
 	}
-	r.client = c
+	return true
 }
-func (r *AddonResource) auth(ctx context.Context) error { return r.client.CheckAdmin(ctx) }
-)
-
 func validateURL(s string) bool {
 	parsed, err := url.Parse(s)
-	if err != nil || parsed.Host == "" || parsed.User != nil ||
-		parsed.Fragment != "" || !strings.HasSuffix(parsed.Path, "/manifest.json") ||
-		strings.ContainsAny(s, "\r\n\x00") {
+	if err != nil || parsed.Host == "" || parsed.User != nil || parsed.Fragment != "" ||
+		!strings.HasSuffix(parsed.Path, "/manifest.json") ||
+		strings.IndexByte(s, 0) >= 0 || strings.IndexByte(s, 10) >= 0 || strings.IndexByte(s, 13) >= 0 {
 		return false
 	}
-	switch parsed.Scheme {
-	case "https":
-		return true
-	case "http":
-		return parsed.Port() == "" && kubeServiceHost.MatchString(strings.ToLower(parsed.Hostname()))
-	default:
-		return false
-	}
+	if parsed.Scheme == "https" { return true }
+	return parsed.Scheme == "http" && parsed.Port() == "" && isKubernetesServiceHost(parsed.Hostname())
 }
 func (r *AddonResource) Create(ctx context.Context, q resource.CreateRequest, a *resource.CreateResponse) {
 	var m addonModel
