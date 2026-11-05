@@ -3,6 +3,7 @@ package provider
 import (
  "context"
  "strings"
+ "net/url"
  "github.com/SmadjaPaul/terraform-provider-polyfin/internal/polyfin"
  "github.com/hashicorp/terraform-plugin-framework/resource"
  "github.com/hashicorp/terraform-plugin-framework/path"
