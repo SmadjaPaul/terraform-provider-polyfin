@@ -1,3 +1,29 @@
 # terraform-provider-polyfin
 
-Declarative, security-first OpenTofu/Terraform provider targeting the pinned Polyfin v0.60.0 administrative API. Initial implementation is qualified on isolated fixtures only; no production changes, secrets, or registry release are implied.
+A security-first OpenTofu/Terraform provider for the native **Polyfin v0.60**
+administration API, published as `SmadjaPaul/polyfin` after the first qualified
+GPG-signed Registry release.
+
+## Initial scope
+
+- `polyfin_addon`: declarative Stremio/Eclipse source with a write-only
+  manifest URL, non-secret rotation counter and explicit enabled flag.
+  Import uses Polyfin's **installation UUID**, not the manifest ID.
+- `polyfin_addons` data source: JSON summaries of only
+  `id,name,kind,enabled`, never raw manifest URLs.
+
+The provider refuses implicit addon deletion and refuses creation when
+another installed source has the same display name. It does not access
+playback history, profile data, family accounts or existing databases.
+
+## Local development
+
+```sh
+go test -race ./...
+go vet ./...
+```
+
+See [architecture](docs/architecture.md) and [release checklist](docs/release.md).
+Production Atlantis configuration and a Registry release are **not** part of
+this bootstrap. No Polyfin admin cookie, TorBox key or manifest address is
+included here.
