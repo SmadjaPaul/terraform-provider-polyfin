@@ -5,6 +5,7 @@ import (
  "strings"
  "github.com/SmadjaPaul/terraform-provider-polyfin/internal/polyfin"
  "github.com/hashicorp/terraform-plugin-framework/resource"
+ "github.com/hashicorp/terraform-plugin-framework/path"
  rschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
  "github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -96,5 +97,5 @@ func(r *AddonResource)Delete(ctx context.Context,_ resource.DeleteRequest,a *res
  a.Diagnostics.AddError("Deletion blocked","Removing a polyfin_addon resource never deletes its server addon. Keep resource in config or use an explicit, reviewed manual decommission process.")
 }
 func(r *AddonResource)ImportState(ctx context.Context,q resource.ImportStateRequest,a *resource.ImportStateResponse){
- a.Diagnostics.Append(a.State.SetAttribute(ctx,rschema.PathMatchRoot("id"),q.ID)...)
+ a.Diagnostics.Append(a.State.SetAttribute(ctx,path.Root("id"),q.ID)...)
 }
