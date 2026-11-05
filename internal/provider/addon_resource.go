@@ -51,6 +51,7 @@ func (r *AddonResource) Configure(_ context.Context, q resource.ConfigureRequest
 	r.client = c
 }
 func (r *AddonResource) auth(ctx context.Context) error { return r.client.CheckAdmin(ctx) }
+
 // Allow plain HTTP only for exact Kubernetes Service FQDNs.
 // Polyfin restricts server-side private addon installation to administrators.
 func isKubernetesServiceHost(host string) bool {
@@ -70,6 +71,7 @@ func isKubernetesServiceHost(host string) bool {
 	}
 	return true
 }
+
 func validateURL(s string) bool {
 	parsed, err := url.Parse(s)
 	if err != nil || parsed.Host == "" || parsed.User != nil || parsed.Fragment != "" ||
@@ -77,9 +79,12 @@ func validateURL(s string) bool {
 		strings.IndexByte(s, 0) >= 0 || strings.IndexByte(s, 10) >= 0 || strings.IndexByte(s, 13) >= 0 {
 		return false
 	}
-	if parsed.Scheme == "https" { return true }
+	if parsed.Scheme == "https" {
+		return true
+	}
 	return parsed.Scheme == "http" && parsed.Port() == "" && isKubernetesServiceHost(parsed.Hostname())
 }
+
 func (r *AddonResource) Create(ctx context.Context, q resource.CreateRequest, a *resource.CreateResponse) {
 	var m addonModel
 	var config addonModel
