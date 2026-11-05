@@ -43,7 +43,7 @@ func validateURL(s string)bool {
  parsed,err:=url.Parse(s)
  return err==nil && parsed.Scheme=="https" && parsed.Host!="" && parsed.User==nil &&
   parsed.Fragment=="" && strings.HasSuffix(parsed.Path,"/manifest.json") &&
-  !strings.ContainsAny(s,"\\r\\n")
+  !strings.ContainsRune(s, 0)
 }
 func(r *AddonResource)Create(ctx context.Context,q resource.CreateRequest,a *resource.CreateResponse){
  var m addonModel;a.Diagnostics.Append(q.Plan.Get(ctx,&m)...);if a.Diagnostics.HasError(){return}
