@@ -9,6 +9,11 @@ GPG-signed Registry release.
 - `polyfin_addon`: declarative Stremio/Eclipse source with a write-only
   manifest URL, non-secret rotation counter and explicit enabled flag.
   Import uses Polyfin's **installation UUID**, not the manifest ID.
+- Private AIOStreams integration: `polyfin_addon.manifest_url_wo` accepts
+  `http://service.namespace.svc.cluster.local/…/manifest.json` exclusively
+  on Kubernetes Service DNS; public HTTP and arbitrary LAN/IP addresses
+  remain rejected. Use a dedicated service/identity NetworkPolicy. This is a
+  source-level capability, not an AIOStreams deployment or live import.
 - `polyfin_addons` data source: JSON summaries of only
   `id,name,kind,enabled`, never raw manifest URLs.
 

@@ -51,12 +51,40 @@ func (r *AddonResource) Configure(_ context.Context, q resource.ConfigureRequest
 	r.client = c
 }
 func (r *AddonResource) auth(ctx context.Context) error { return r.client.CheckAdmin(ctx) }
+
+// Allow plain HTTP only for exact Kubernetes Service FQDNs.
+// Polyfin restricts server-side private addon installation to administrators.
+func isKubernetesServiceHost(host string) bool {
+	labels := strings.Split(strings.ToLower(host), ".")
+	if len(labels) != 5 || labels[2] != "svc" || labels[3] != "cluster" || labels[4] != "local" {
+		return false
+	}
+	for _, label := range labels[:2] {
+		if len(label) == 0 || len(label) > 63 || label[0] == '-' || label[len(label)-1] == '-' {
+			return false
+		}
+		for _, ch := range label {
+			if !((ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '-') {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 func validateURL(s string) bool {
 	parsed, err := url.Parse(s)
-	return err == nil && parsed.Scheme == "https" && parsed.Host != "" && parsed.User == nil &&
-		parsed.Fragment == "" && strings.HasSuffix(parsed.Path, "/manifest.json") &&
-		!strings.ContainsRune(s, 0)
+	if err != nil || parsed.Host == "" || parsed.User != nil || parsed.Fragment != "" ||
+		!strings.HasSuffix(parsed.Path, "/manifest.json") ||
+		strings.IndexByte(s, 0) >= 0 || strings.IndexByte(s, 10) >= 0 || strings.IndexByte(s, 13) >= 0 {
+		return false
+	}
+	if parsed.Scheme == "https" {
+		return true
+	}
+	return parsed.Scheme == "http" && parsed.Port() == "" && isKubernetesServiceHost(parsed.Hostname())
 }
+
 func (r *AddonResource) Create(ctx context.Context, q resource.CreateRequest, a *resource.CreateResponse) {
 	var m addonModel
 	var config addonModel
@@ -75,7 +103,7 @@ func (r *AddonResource) Create(ctx context.Context, q resource.CreateRequest, a 
 	}
 	secret := config.ManifestURL.ValueString()
 	if config.ManifestURL.IsNull() || config.ManifestURL.IsUnknown() || !validateURL(secret) {
-		a.Diagnostics.AddError("Manifest required", "Supply a valid HTTPS manifest_url_wo for creation; value suppressed.")
+		a.Diagnostics.AddError("Manifest required", "Supply an HTTPS manifest or in-cluster Kubernetes Service HTTP manifest_url_wo; value suppressed.")
 		return
 	}
 	existing, err := r.client.List(ctx)

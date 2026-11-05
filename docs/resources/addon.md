@@ -21,8 +21,12 @@ resource "polyfin_addon" "meteor" {
 
 `manifest_url_wo` is a write-only attribute. It is required when creating an
 addon and when deliberately rotating its manifest. Increment
-`manifest_url_wo_version` for each rotation. The URL must be HTTPS, contain no
-user information or fragment, and end in `/manifest.json`.
+`manifest_url_wo_version` for each rotation. The URL must use HTTPS by default. Plain HTTP is allowed **only** for an
+exact Kubernetes Service FQDN of the form `service.namespace.svc.cluster.local`
+(with no explicit port), for native administrators operating in-cluster.
+URLs must contain no user information or fragment and end in `/manifest.json`.
+Private URLs may carry credentials in paths/queries: pass them only through
+write-only values from an approved secret source, never Git or logs.
 
 ## Schema
 
