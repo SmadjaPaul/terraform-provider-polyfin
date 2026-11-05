@@ -73,6 +73,40 @@ func TestNativeAdminLoginFromProtectedFiles(t *testing.T){
  if err:=c.CheckAdmin(context.Background());err!=nil{t.Fatal(err)}
  if _,err:=c.List(context.Background());err!=nil{t.Fatal(err)}
 }
+func TestExpiredNativeSessionFailsClosed(t *testing.T){
+ sessionGets:=0
+ srv:=httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter,r *http.Request){
+  if r.URL.Path!="/admin/api/session"{t.Fatalf("unexpected request %s",r.URL.Path)}
+  if r.Method=="POST"{
+   w.Header().Set("Set-Cookie","polyfin_session=synthetic-token; HttpOnly; Path=/")
+   w.WriteHeader(201)
+   w.Write([]byte(`{"user":{"isAdministrator":true}}`))
+   return
+  }
+  sessionGets++
+  if sessionGets==1{
+   w.Write([]byte(`{"user":{"isAdministrator":true}}`))
+   return
+  }
+  http.Error(w,"expired credential=synthetic-secret",http.StatusUnauthorized)
+ }))
+ defer srv.Close()
+ d:=t.TempDir()
+ username:=filepath.Join(d,"username")
+ password:=filepath.Join(d,"password")
+ if err:=os.WriteFile(username,[]byte("test-admin"),0600);err!=nil{t.Fatal(err)}
+ if err:=os.WriteFile(password,[]byte("test-password"),0600);err!=nil{t.Fatal(err)}
+ t.Setenv("POLYFIN_ADMIN_COOKIE_FILE","")
+ t.Setenv("POLYFIN_ADMIN_USERNAME_FILE",username)
+ t.Setenv("POLYFIN_ADMIN_PASSWORD_FILE",password)
+ c,err:=NewFromEnvironment(srv.URL);if err!=nil{t.Fatal(err)}
+ if err:=c.CheckAdmin(context.Background());err!=nil{t.Fatal(err)}
+ err=c.CheckAdmin(context.Background())
+ if err==nil||!strings.Contains(err.Error(),"HTTP 401")||strings.Contains(err.Error(),"synthetic-secret"){
+  t.Fatalf("expired session was not failed closed safely: %v",err)
+ }
+ if sessionGets!=2{t.Fatalf("unexpected session checks: %d",sessionGets)}
+}
 func TestAdminRoleFailClosed(t *testing.T){
  srv:=httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter,r *http.Request){
   w.Write([]byte(`{"isAdministrator":true,"user":{"isAdministrator":false}}`))
