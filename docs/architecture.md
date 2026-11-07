@@ -30,3 +30,7 @@ https://github.com/moodiness/polyfin/blob/v0.60.0/internal/admin/addons.go
 
 The provider does **not** own user accounts, OIDC identities, playback
 histories, playlists, databases, family media, secrets or backups.
+
+## Canonical Public address (PLT-135)
+
+The separate `polyfin_public_address` singleton manages only the canonical HTTPS origin consumed by Polyfin's OIDC callback. The upstream v0.61.1 admin API accepts partial PUT settings payloads and preserves omitted keys (validated in its `internal/admin/security_test.go`); never POST full settings or redacted secrets. The provider re-reads the public address and requires administrator credentials from protected runtime files. Do not import or apply until the dedicated Atlantis state and runtime credentials are qualified; Terraform configuration must not own OIDC users, groups, tokens, media, libraries or personal data. A destroy hard-fails to avoid resetting the canonical address.
