@@ -14,6 +14,7 @@ GPG-signed Registry release.
   on Kubernetes Service DNS; public HTTP and arbitrary LAN/IP addresses
   remain rejected. Use a dedicated service/identity NetworkPolicy. This is a
   source-level capability, not an AIOStreams deployment or live import.
+- `polyfin_public_address` singleton resource: declarative HTTPS canonical origin for OIDC redirect and links. Updates only the `publicAddress` key on upstream's partial admin settings API; prevents destroy/reset and does not own other settings.
 - `polyfin_addons` data source: JSON summaries of only
   `id,name,kind,enabled`, never raw manifest URLs.
 
