@@ -29,7 +29,10 @@ func(p *PolyfinProvider)Configure(ctx context.Context,q provider.ConfigureReques
  r.ResourceData=c;r.DataSourceData=c
 }
 func(p *PolyfinProvider)Resources(_ context.Context)[]func()resource.Resource{
- return []func()resource.Resource{func()resource.Resource{return NewAddonResource()}}
+ return []func()resource.Resource{
+  func()resource.Resource{return NewAddonResource()},
+  func()resource.Resource{return NewPublicAddressResource()},
+ }
 }
 func(p *PolyfinProvider)DataSources(_ context.Context)[]func()datasource.DataSource{
  return []func()datasource.DataSource{func()datasource.DataSource{return NewAddonsDataSource()}}
