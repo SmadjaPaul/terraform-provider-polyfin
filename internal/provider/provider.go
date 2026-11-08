@@ -32,6 +32,7 @@ func(p *PolyfinProvider)Resources(_ context.Context)[]func()resource.Resource{
  return []func()resource.Resource{
   func()resource.Resource{return NewAddonResource()},
   func()resource.Resource{return NewPublicAddressResource()},
+  func()resource.Resource{return NewPlaybackLanguagesResource()},
  }
 }
 func(p *PolyfinProvider)DataSources(_ context.Context)[]func()datasource.DataSource{
