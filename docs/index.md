@@ -10,7 +10,7 @@ keeping addon removal explicit and irreversible operations outside Terraform.
 |------|---------|
 | OpenTofu | 1.11 or later; Atlantis is qualified with 1.13.1 |
 | Terraform | 1.14 or later when using Terraform instead of OpenTofu |
-| Polyfin | 0.60.x native administration API |
+| Polyfin | 0.60.x native administration API; `polyfin_playback_source_policy` needs 0.83 or later |
 
 ## Authentication
 
@@ -49,6 +49,12 @@ provider "polyfin" {
 ## Resources and data sources
 
 - [`polyfin_addon`](resources/addon.md) installs and updates one native addon.
+- [`polyfin_public_address`](resources/public_address.md) owns the canonical
+  public origin used for OIDC redirects and links.
+- [`polyfin_playback_languages`](resources/playback_languages.md) owns the
+  server-wide default audio and subtitle languages.
+- [`polyfin_playback_source_policy`](resources/playback_source_policy.md) owns
+  the server-wide **Send apps to the source** setting (Polyfin 0.83 or later).
 - [`polyfin_addons`](data-sources/addons.md) reads redacted addon summaries.
 
 The provider refuses implicit destruction. Removing `polyfin_addon` from
