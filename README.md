@@ -16,6 +16,8 @@ GPG-signed Registry release.
   source-level capability, not an AIOStreams deployment or live import.
 - `polyfin_public_address` singleton resource: declarative HTTPS canonical origin for OIDC redirect and links. Updates only the `publicAddress` key on upstream's partial admin settings API; prevents destroy/reset and does not own other settings.
 - `polyfin_playback_source_policy` singleton resource: the server-wide "Send apps to the source" setting (Polyfin 0.83+), sent as a partial `sendAppsToSource` update and read back; destroy is blocked.
+- `polyfin_known_proxies` singleton resource: Settings > Security > Known proxies, canonical entries only, partial `knownProxies` update read back; destroy is blocked.
+- `polyfin_version_order` singleton resource: the server-wide version order (for example `language` first to rank the preferred audio language), partial `versionOrder` update read back; destroy is blocked.
 - `polyfin_addons` data source: JSON summaries of only
   `id,name,kind,enabled`, never raw manifest URLs.
 
