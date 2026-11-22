@@ -55,6 +55,10 @@ provider "polyfin" {
   server-wide default audio and subtitle languages.
 - [`polyfin_playback_source_policy`](resources/playback_source_policy.md) owns
   the server-wide **Send apps to the source** setting (Polyfin 0.83 or later).
+- [`polyfin_known_proxies`](resources/known_proxies.md) owns Settings >
+  Security > Known proxies.
+- [`polyfin_version_order`](resources/version_order.md) owns the server-wide
+  version order (preferred audio language first, for example).
 - [`polyfin_addons`](data-sources/addons.md) reads redacted addon summaries.
 
 The provider refuses implicit destruction. Removing `polyfin_addon` from
