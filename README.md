@@ -18,6 +18,7 @@ GPG-signed Registry release.
 - `polyfin_playback_source_policy` singleton resource: the server-wide "Send apps to the source" setting (Polyfin 0.83+), sent as a partial `sendAppsToSource` update and read back; destroy is blocked.
 - `polyfin_known_proxies` singleton resource: Settings > Security > Known proxies, canonical entries only, partial `knownProxies` update read back; destroy is blocked.
 - `polyfin_version_order` singleton resource: the server-wide version order (for example `language` first to rank the preferred audio language), partial `versionOrder` update read back; destroy is blocked.
+- `polyfin_identity_provider` singleton resource: Settings > Security > Identity provider (OIDC issuer, client ID, write-only client secret, claims), partial update read back; destroy is blocked.
 - `polyfin_addons` data source: JSON summaries of only
   `id,name,kind,enabled`, never raw manifest URLs.
 

@@ -55,6 +55,8 @@ provider "polyfin" {
   server-wide default audio and subtitle languages.
 - [`polyfin_playback_source_policy`](resources/playback_source_policy.md) owns
   the server-wide **Send apps to the source** setting (Polyfin 0.83 or later).
+- [`polyfin_identity_provider`](resources/identity_provider.md) owns Settings >
+  Security > Identity provider (OIDC single sign-on).
 - [`polyfin_known_proxies`](resources/known_proxies.md) owns Settings >
   Security > Known proxies.
 - [`polyfin_version_order`](resources/version_order.md) owns the server-wide
