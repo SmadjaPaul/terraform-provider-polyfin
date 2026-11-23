@@ -71,7 +71,7 @@ func (c *Client) SetVersionOrder(ctx context.Context, order []string) error {
 	if order == nil {
 		order = []string{}
 	}
-	if _, err := c.request(ctx, "PUT", "/admin/api/settings", map[string][]string{"versionOrder": order}, nil); err != nil {
+	if err := c.putSetting(ctx, map[string]any{"versionOrder": order}); err != nil {
 		return err
 	}
 	current, err := c.GetVersionOrder(ctx)

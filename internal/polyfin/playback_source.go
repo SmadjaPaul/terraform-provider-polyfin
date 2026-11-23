@@ -33,7 +33,7 @@ func (c *Client) SetSendAppsToSource(ctx context.Context, enabled bool) error {
 	if err := c.CheckAdmin(ctx); err != nil {
 		return err
 	}
-	if _, err := c.request(ctx, "PUT", "/admin/api/settings", map[string]bool{"sendAppsToSource": enabled}, nil); err != nil {
+	if err := c.putSetting(ctx, map[string]any{"sendAppsToSource": enabled}); err != nil {
 		return err
 	}
 	current, err := c.GetSendAppsToSource(ctx)

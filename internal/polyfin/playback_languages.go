@@ -33,10 +33,10 @@ func (c *Client) SetPlaybackLanguages(ctx context.Context, languages PlaybackLan
   return errors.New("unsupported default language: use ISO 639-2/B fre, eng, spa, jpn or empty")
  }
  if err:=c.CheckAdmin(ctx);err!=nil{return err}
- _,err:=c.request(ctx,"PUT","/admin/api/settings",map[string]string{
+ err:=c.putSetting(ctx,map[string]any{
    "defaultAudioLanguage":languages.Audio,
    "defaultSubtitleLanguage":languages.Subtitles,
- },nil)
+ })
  if err!=nil{return err}
  current,err:=c.GetPlaybackLanguages(ctx)
  if err!=nil{return err}

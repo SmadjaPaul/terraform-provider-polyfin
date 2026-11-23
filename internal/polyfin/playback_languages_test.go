@@ -12,6 +12,7 @@ import (
 func TestPlaybackLanguagesPartialSettings(t *testing.T){
  settings:=map[string]any{
   "defaultAudioLanguage":"","defaultSubtitleLanguage":"",
+  "serverName":"Polyfin Media","language":"fr","quickConnectEnabled":true,"legacyAuthorization":false,
   "publicAddress":"https://tv.smadja.dev",
   "providerIssuer":"https://auth.smadja.dev/application/o/polyfin/",
   "providerClientSecretSet":true,
@@ -28,10 +29,10 @@ func TestPlaybackLanguagesPartialSettings(t *testing.T){
    _=json.NewEncoder(w).Encode(settings)
   case r.URL.Path=="/admin/api/settings"&&r.Method=="PUT":
    puts++
-   var data map[string]string
+   var data map[string]any
    if err:=json.NewDecoder(r.Body).Decode(&data);err!=nil{t.Error(err)}
-   if len(data)!=2||data["defaultAudioLanguage"]!="fre"||data["defaultSubtitleLanguage"]!="fre"{t.Errorf("unwanted settings update: %v",data)}
-   for k,v:=range data{settings[k]=v}
+   if len(data)!=6||data["defaultAudioLanguage"]!="fre"||data["defaultSubtitleLanguage"]!="fre"{t.Errorf("unwanted settings update: %v",data)}
+   for _,k:=range []string{"defaultAudioLanguage","defaultSubtitleLanguage"}{settings[k]=data[k]}
    _=json.NewEncoder(w).Encode(settings)
   default:http.Error(w,"not found",404)
   }
