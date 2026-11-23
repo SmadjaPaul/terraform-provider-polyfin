@@ -16,6 +16,7 @@ func TestSendAppsToSourceIsPartialAndVerified(t *testing.T) {
 		"publicAddress":           "https://tv.smadja.dev",
 		"providerClientSecretSet": true,
 		"versionOrder":            []string{"resolution-high", "source"},
+		"serverName":              "Polyfin Media", "language": "fr", "quickConnectEnabled": true, "legacyAuthorization": false,
 	}
 	puts := 0
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -27,15 +28,15 @@ func TestSendAppsToSourceIsPartialAndVerified(t *testing.T) {
 			_ = json.NewEncoder(w).Encode(settings)
 		case r.URL.Path == "/admin/api/settings" && r.Method == "PUT":
 			puts++
-			var data map[string]bool
+			var data map[string]any
 			if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
 				t.Error(err)
 			}
-			if len(data) != 1 {
+			if len(data) != 5 {
 				t.Errorf("unwanted settings update: %v", data)
 			}
 			if v, ok := data["sendAppsToSource"]; ok {
-				settings["sendAppsToSource"] = v
+				settings["sendAppsToSource"] = v.(bool)
 			}
 			_ = json.NewEncoder(w).Encode(settings)
 		default:

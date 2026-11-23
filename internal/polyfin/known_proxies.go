@@ -122,7 +122,7 @@ func (c *Client) SetKnownProxies(ctx context.Context, entries []string) error {
 	if err := c.CheckAdmin(ctx); err != nil {
 		return err
 	}
-	if _, err := c.request(ctx, "PUT", "/admin/api/settings", map[string][]string{"knownProxies": want}, nil); err != nil {
+	if err := c.putSetting(ctx, map[string]any{"knownProxies": want}); err != nil {
 		return err
 	}
 	current, err := c.GetKnownProxies(ctx)

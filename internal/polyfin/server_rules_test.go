@@ -52,6 +52,7 @@ func fakeSettings(t *testing.T, settings map[string]any, puts *[]map[string]any)
 
 func baseSettings() map[string]any {
 	return map[string]any{
+		"serverName": "Polyfin Media", "language": "fr", "quickConnectEnabled": true, "legacyAuthorization": false,
 		"knownProxies":            []string{},
 		"versionOrder":            []string{"resolution-high", "source"},
 		"versionCodecOrder":       []string{"av1", "hevc", "vp9", "h264", "vc1", "mpeg4", "mpeg2video"},
@@ -103,7 +104,7 @@ func TestKnownProxiesIsPartialAndVerified(t *testing.T) {
 	if err := c.SetKnownProxies(context.Background(), []string{"10.244.0.0/16"}); err != nil {
 		t.Fatal(err)
 	}
-	if len(puts) != 1 || len(puts[0]) != 1 || puts[0]["knownProxies"] == nil {
+	if len(puts) != 1 || len(puts[0]) != 5 || puts[0]["knownProxies"] == nil || puts[0]["serverName"] == nil || puts[0]["language"] == nil {
 		t.Fatalf("expected one PUT holding only knownProxies, got %v", puts)
 	}
 	if settings["publicAddress"] != "https://tv.smadja.dev" || settings["sendAppsToSource"] != true || settings["providerClientSecretSet"] != true {
@@ -148,7 +149,7 @@ func TestVersionOrderIsPartialAndVerified(t *testing.T) {
 	if err := c.SetVersionOrder(context.Background(), []string{"language", "resolution-high"}); err != nil {
 		t.Fatal(err)
 	}
-	if len(puts) != 1 || len(puts[0]) != 1 || puts[0]["versionOrder"] == nil {
+	if len(puts) != 1 || len(puts[0]) != 5 || puts[0]["versionOrder"] == nil || puts[0]["serverName"] == nil || puts[0]["language"] == nil {
 		t.Fatalf("expected one PUT holding only versionOrder, got %v", puts)
 	}
 	codecs, _ := json.Marshal(settings["versionCodecOrder"])
