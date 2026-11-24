@@ -14,6 +14,9 @@ type User struct {
 	Name            string `json:"name"`
 	IsAdministrator bool   `json:"isAdministrator"`
 	IsHidden        bool   `json:"isHidden"`
+	// Downloads is the "Can download" permission: Jellyfin clients read it as
+	// CanDownload, and Music Assistant marks a track unavailable without it.
+	Downloads bool `json:"downloads"`
 }
 
 // ListUsers reads GET /admin/api/users (administrator only).
@@ -72,4 +75,25 @@ func (c *Client) DeleteUser(ctx context.Context, id string) error {
 		return err
 	}
 	return nil
+}
+
+// SetUserDownloads sets only the "Can download" permission of an account with
+// PATCH /admin/api/users/{id}. The body carries that single field, so every
+// other setting of the account stays as it is. The result is read back.
+func (c *Client) SetUserDownloads(ctx context.Context, id string, allowed bool) (User, error) {
+	if err := c.CheckAdmin(ctx); err != nil {
+		return User{}, err
+	}
+	body := map[string]any{"downloads": allowed}
+	if _, err := c.request(ctx, "PATCH", "/admin/api/users/"+url.PathEscape(id), body, nil); err != nil {
+		return User{}, err
+	}
+	u, found, err := c.FindUser(ctx, id)
+	if err != nil {
+		return User{}, err
+	}
+	if !found || u.Downloads != allowed {
+		return User{}, errors.New("Polyfin user downloads readback mismatch")
+	}
+	return u, nil
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	schema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -23,11 +24,12 @@ var _ resource.ResourceWithImportState = (*UserResource)(nil)
 type UserResource struct{ client *polyfin.Client }
 
 type userModel struct {
-	ID              types.String `tfsdk:"id"`
-	Name            types.String `tfsdk:"name"`
-	PasswordWO      types.String `tfsdk:"password_wo"`
-	IsAdministrator types.Bool   `tfsdk:"is_administrator"`
-	IsHidden        types.Bool   `tfsdk:"is_hidden"`
+	ID                       types.String `tfsdk:"id"`
+	Name                     types.String `tfsdk:"name"`
+	PasswordWO               types.String `tfsdk:"password_wo"`
+	IsAdministrator          types.Bool   `tfsdk:"is_administrator"`
+	IsHidden                 types.Bool   `tfsdk:"is_hidden"`
+	EnableContentDownloading types.Bool   `tfsdk:"enable_content_downloading"`
 }
 
 func NewUserResource() resource.Resource { return &UserResource{} }
@@ -38,7 +40,7 @@ func (r *UserResource) Metadata(_ context.Context, q resource.MetadataRequest, a
 
 func (r *UserResource) Schema(_ context.Context, _ resource.SchemaRequest, a *resource.SchemaResponse) {
 	a.Schema = schema.Schema{
-		Description: "A local Polyfin account (for example a service account). Does not manage groups, parental control or identity-provider links. Changing any attribute replaces the account.",
+		Description: "A local Polyfin account (for example a service account). Does not manage groups, parental control or identity-provider links. Changing the name, password, administrator or hidden flag replaces the account; enable_content_downloading is updated in place.",
 		Attributes: map[string]schema.Attribute{
 			"id":   schema.StringAttribute{Computed: true, Description: "Polyfin user id.", PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}},
 			"name": schema.StringAttribute{Required: true, Description: "Sign-in name.", PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()}},
@@ -48,6 +50,10 @@ func (r *UserResource) Schema(_ context.Context, _ resource.SchemaRequest, a *re
 			},
 			"is_administrator": schema.BoolAttribute{Required: true, Description: "Administrator flag. Replaces the account when changed.", PlanModifiers: []planmodifier.Bool{boolplanmodifier.RequiresReplace()}},
 			"is_hidden":        schema.BoolAttribute{Required: true, Description: "Hide the account from sign-in screens. Replaces the account when changed.", PlanModifiers: []planmodifier.Bool{boolplanmodifier.RequiresReplace()}},
+			"enable_content_downloading": schema.BoolAttribute{
+				Optional: true, Computed: true, Default: booldefault.StaticBool(false),
+				Description: "\"Can download\" permission (Jellyfin CanDownload / EnableContentDownloading). Music Assistant marks every track of an account without it as unavailable. Updated in place; only this permission is written, every other setting of the account is left as is.",
+			},
 		},
 	}
 }
@@ -81,6 +87,12 @@ func (r *UserResource) Create(ctx context.Context, q resource.CreateRequest, a *
 		a.Diagnostics.AddError("Polyfin user refused", err.Error())
 		return
 	}
+	if u.Downloads != m.EnableContentDownloading.ValueBool() {
+		if u, err = r.client.SetUserDownloads(ctx, u.ID, m.EnableContentDownloading.ValueBool()); err != nil {
+			a.Diagnostics.AddError("Polyfin user downloads refused", err.Error())
+			return
+		}
+	}
 	m.ID = types.StringValue(u.ID)
 	m.PasswordWO = types.StringNull()
 	a.Diagnostics.Append(a.State.Set(ctx, &m)...)
@@ -104,12 +116,23 @@ func (r *UserResource) Read(ctx context.Context, q resource.ReadRequest, a *reso
 	m.Name = types.StringValue(u.Name)
 	m.IsAdministrator = types.BoolValue(u.IsAdministrator)
 	m.IsHidden = types.BoolValue(u.IsHidden)
+	m.EnableContentDownloading = types.BoolValue(u.Downloads)
 	m.PasswordWO = types.StringNull()
 	a.Diagnostics.Append(a.State.Set(ctx, &m)...)
 }
 
-func (r *UserResource) Update(_ context.Context, _ resource.UpdateRequest, a *resource.UpdateResponse) {
-	a.Diagnostics.AddError("Polyfin user is immutable", "Every attribute forces a replacement; Update should never run.")
+func (r *UserResource) Update(ctx context.Context, q resource.UpdateRequest, a *resource.UpdateResponse) {
+	var m userModel
+	a.Diagnostics.Append(q.Plan.Get(ctx, &m)...)
+	if a.Diagnostics.HasError() {
+		return
+	}
+	if _, err := r.client.SetUserDownloads(ctx, m.ID.ValueString(), m.EnableContentDownloading.ValueBool()); err != nil {
+		a.Diagnostics.AddError("Polyfin user downloads refused", err.Error())
+		return
+	}
+	m.PasswordWO = types.StringNull()
+	a.Diagnostics.Append(a.State.Set(ctx, &m)...)
 }
 
 func (r *UserResource) Delete(ctx context.Context, q resource.DeleteRequest, a *resource.DeleteResponse) {
