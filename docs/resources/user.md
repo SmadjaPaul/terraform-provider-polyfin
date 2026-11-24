@@ -4,8 +4,9 @@ Creates one local Polyfin account through `POST /admin/api/users` (administrator
 session required). Intended for service accounts such as `svc-music-assistant`.
 
 The provider does not manage groups, parental control, devices or
-identity-provider links. Every attribute forces a replacement: the account is
-created once, and rotating its password means recreating it.
+identity-provider links. The name, password, administrator and hidden flags force
+a replacement: the account is created once, and rotating its password means
+recreating it. `enable_content_downloading` is updated in place.
 
 The password is **write-only** (`password_wo`): it is sent once at creation and
 never stored in the plan or the state. It needs OpenTofu 1.11+ or Terraform 1.11+.
@@ -22,6 +23,13 @@ See `examples/resources/polyfin_user/resource.tf`.
 - `password_wo` (Required, Write-only, Sensitive) Initial password.
 - `is_administrator` (Required) Administrator flag.
 - `is_hidden` (Required) Hide the account from sign-in screens.
+- `enable_content_downloading` (Optional, default `false`) The "Can download"
+  permission (`PATCH /admin/api/users/{id}` with `{"downloads": ...}`; Jellyfin
+  `CanDownload` / `EnableContentDownloading`). Music Assistant 2.10 marks every
+  track of an account without it as unavailable (`No playable items found`), so
+  a Music Assistant service account needs `true`. Only this permission is
+  written: every other setting of the account is left as is. A change is an
+  in-place update; drift made in the Polyfin interface is detected and reverted.
 
 ## Attribute Reference
 
